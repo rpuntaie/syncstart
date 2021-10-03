@@ -11,6 +11,7 @@ The steps taken by ``syncstart``:
 Requirements:
 
 - ffmpeg installed
+- Python3 with tk (tk is separate on Ubuntu: python3-tk)
 
 References:
 

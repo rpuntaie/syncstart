@@ -22,12 +22,10 @@ Command line help::
       --version             show program's version number and exit
       -t TAKE, --take TAKE  Take X seconds of the inputs to look at. (default: 20)
       -s, --show            Turn off "show diagrams", in case you are confident.
-      -n, --normalize       Turn on normalize. It turns on by itself in a second pass, if sampling rates
-                            differ.
+      -n, --normalize       Turn on normalize. It turns on by itself in a second pass, if sampling rates differ.
       -d, --denoise         Turns on denoise, as experiment in case of failure.
       -l LOWPASS, --lowpass LOWPASS
-                            lowpass, just in case, because like with manual sync'ing, the low frequencies
-                            matter more. 0 == off. (default: 0)
+                            lowpass, just in case, because like with manual sync'ing, the low frequencies matter more. 0 == off. (default: 0)
 
 
 DESCRIPTION
@@ -44,6 +42,7 @@ The steps taken by ``syncstart``:
 Requirements:
 
 - ffmpeg installed
+- Python3 with tk (tk is separate on Ubuntu: python3-tk)
 
 References:
 
