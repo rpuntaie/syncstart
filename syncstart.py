@@ -19,6 +19,11 @@ References:
 - https://github.com/slhck/ffmpeg-normalize
 - https://dsp.stackexchange.com/questions/736/how-do-i-implement-cross-correlation-to-prove-two-audio-files-are-similar
 
+Within Python:
+
+from syncstart import file_offset
+file_offset
+
 """
 
 import matplotlib
@@ -43,13 +48,13 @@ normalize = False
 denoise = False
 lowpass = 0
 
-ffmpegwav = "ffmpeg -i {} -t %s -c:a pcm_s16le -map 0:a {}"
-ffmpegnormalize = "ffmpeg -y -nostdin -i {} -filter_complex \
-'[0:0]loudnorm=i=-23.0:lra=7.0:tp=-2.0:offset=4.45:linear=true:print_format=json[norm0]' \
--map_metadata 0 -map_metadata:s:a:0 0:s:a:0 -map_chapters 0 -c:v copy -map '[norm0]' \
--c:a:0 pcm_s16le -c:s copy {}"
-ffmpegdenoise = "ffmpeg -i {} -af 'afftdn=nf=-25' {}"
-ffmpeglow = "ffmpeg -i {} -af 'lowpass=f=%s' {}"
+ffmpegwav = 'ffmpeg -i "{}" -t %s -c:a pcm_s16le -map 0:a "{}"'
+ffmpegnormalize = ('ffmpeg -y -nostdin -i "{}" -filter_complex ' +
+"'[0:0]loudnorm=i=-23.0:lra=7.0:tp=-2.0:offset=4.45:linear=true:print_format=json[norm0]' " +
+"-map_metadata 0 -map_metadata:s:a:0 0:s:a:0 -map_chapters 0 -c:v copy -map '[norm0]' " +
+'-c:a:0 pcm_s16le -c:s copy "{}"')
+ffmpegdenoise = 'ffmpeg -i "{}" -af'+" 'afftdn=nf=-25' "+'"{}"'
+ffmpeglow = 'ffmpeg -i "{}" -af'+" 'lowpass=f=%s' "+'"{}"'
 o = lambda x: '%s%s'%(x,'.wav')
 
 def in_out(command,infile,outfile):
