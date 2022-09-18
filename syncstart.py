@@ -37,7 +37,7 @@ import os
 import pathlib
 import sys
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = """Roland Puntaier"""
 __email__ = 'roland.puntaier@gmail.com'
 

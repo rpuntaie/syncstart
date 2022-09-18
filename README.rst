@@ -1,5 +1,5 @@
 =======================================
-syncstart(1) Version 1.0.0 \| syncstart
+syncstart(1) Version 1.0.1 \| syncstart
 =======================================
 
 SYNOPSIS
@@ -17,15 +17,17 @@ Command line help::
       in1                   First media file to sync with second, using audio.
       in2                   Second media file to sync with first, using audio.
     
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
       --version             show program's version number and exit
       -t TAKE, --take TAKE  Take X seconds of the inputs to look at. (default: 20)
       -s, --show            Turn off "show diagrams", in case you are confident.
-      -n, --normalize       Turn on normalize. It turns on by itself in a second pass, if sampling rates differ.
+      -n, --normalize       Turn on normalize. It turns on by itself in a second pass, if sampling rates
+                            differ.
       -d, --denoise         Turns on denoise, as experiment in case of failure.
       -l LOWPASS, --lowpass LOWPASS
-                            lowpass, just in case, because like with manual sync'ing, the low frequencies matter more. 0 == off. (default: 0)
+                            lowpass, just in case, because like with manual sync'ing, the low frequencies
+                            matter more. 0 == off. (default: 0)
 
 
 DESCRIPTION
@@ -49,6 +51,11 @@ References:
 - https://ffmpeg.org/ffmpeg-all.html
 - https://github.com/slhck/ffmpeg-normalize
 - https://dsp.stackexchange.com/questions/736/how-do-i-implement-cross-correlation-to-prove-two-audio-files-are-similar
+
+Within Python:
+
+from syncstart import file_offset
+file_offset
 
 
 
