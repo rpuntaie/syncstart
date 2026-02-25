@@ -380,8 +380,8 @@ def estimate_offset(s1,s2):
 
 
 def file_offset(**ka):
-  """CLI program to compute offset of media file 1 in reference
-  to media file 2 using their audio or video streams.
+  """CLI program to compute timing offset (seconds) of media file 1 (in1)
+in referenceto media file 2 (in2) using their audio or video streams.
   ffmpeg is required.
   """
   parser = cli_parser(**ka)
