@@ -1,5 +1,5 @@
 =======================================
-syncstart(1) Version 1.1.1 \| syncstart
+syncstart(1) Version 1.1.2 \| syncstart
 =======================================
 
 SYNOPSIS
@@ -7,15 +7,16 @@ SYNOPSIS
 
 Command line help::
 
-    usage: syncstart [-h] [--version] [-v] [-b BEGIN] [-t TAKE] [-n] [-d] [-l LOWPASS] [-c] [-s] [-q] in1 in2
+    usage: syncstart [options] in1 in2
     
-    CLI interface to sync two media files using their audio or video streams.
-      ffmpeg needs to be available.
+    CLI program to compute timing offset (seconds) of media file 1 (in1)
+    in referenceto media file 2 (in2) using their audio or video streams.
+    ffmpeg is required.
       
     
     positional arguments:
-      in1                   First media file to sync with second.
-      in2                   Second media file to sync with first.
+      in1                   Offset media file.
+      in2                   Reference media file.
     
     options:
       -h, --help            show this help message and exit
@@ -44,9 +45,9 @@ The steps taken by ``syncstart``:
 - process and extract sample audio/video clips using ffmpeg with some default and optional filters
 - read the two clips into a 1D array and apply optional z-score normalization
 - compute offset via correlation using scipy ifft/fft
-- print ffmpeg/ffprobe output or optionally quiet that
-- show diagrams to allow MANUAL correction using ZOOM or optionally suppress that
-- print result
+- print ffmpeg/ffprobe output (optional)
+- show diagrams to allow MANUAL correction using ZOOM (optional)
+- print result as human readable, or print and return result as CSV
 
 MANUAL correction with ZOOM:
 
@@ -79,28 +80,43 @@ INSTALLATION
 
 To install for user only, do::
 
-   pip install --user syncstart
+    pip install --user syncstart
 
 Or activate a virtualenv and do::
 
-   pip install syncstart
+    pip install syncstart
+
+To make syncstart an executable in your PATH on Windows, do:
+
+    # Install pip if you don't have it
+    py -m ensurepip
+    # Upgrade and ensure pip prefers official wheels
+    py -m pip install --upgrade pip setuptools wheel
+    # Install/update pipx
+    py -m pip install --user --upgrade pipx
+    py -m pipx ensurepath
+    pipx install syncstart
+    # Upgrade numpy inside pipx venv
+    pipx runpip syncstart install --upgrade numpy
+    # Test syncstart.exe by reading the version
+    syncstart --version
 
 EXAMPLES
 --------
 
 ::
 
-  # compute audio offset with default settings:
-  syncstart from_s10.m4a from_gopro.m4p
-
-  # compute audio offset using first 10 seconds with denoising, normalization and a 300 Hz lowpass filter:
-  syncstart video1.mp4 video2.mkv -t 10 -dnl 300
-
-  # compute video offset using first 20 seconds, don't show plots, only output final result:
-  syncstart video1.mp4 video2.mkv -vsq
-
-  # compute video offset using seconds 15 to 25 with denoising, cropping and normalization:
-  syncstart video1.mp4 video2.mkv -b 15 -t 10 -vdcn
+    # compute audio offset with default settings:
+    syncstart from_s10.m4a from_gopro.m4p
+    
+    # compute audio offset using first 10 seconds with denoising, normalization and a 300 Hz lowpass filter:
+    syncstart -t 10 -dnl 300 video1.mp4 video2.mkv
+    
+    # compute video offset using first 20 seconds, don\[aq]t show plots, only output final result:
+    syncstart -vsq video1.mp4 video2.mkv
+    
+    # compute video offset using seconds 15 to 25 with denoising, cropping and normalization:
+    syncstart -b 15 -t 10 -vdcn video1.mp4 video2.mkv
 
 License
 -------
