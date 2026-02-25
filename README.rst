@@ -86,7 +86,7 @@ Or activate a virtualenv and do::
 
     pip install syncstart
 
-To make syncstart an executable in your PATH on Windows, do:
+To make syncstart an executable in your PATH on Windows, do::
 
     # Install pip if you don't have it
     py -m ensurepip
@@ -94,6 +94,7 @@ To make syncstart an executable in your PATH on Windows, do:
     py -m pip install --upgrade pip setuptools wheel
     # Install/update pipx
     py -m pip install --user --upgrade pipx
+    # Ensure python binaries are in PATH
     py -m pipx ensurepath
     pipx install syncstart
     # Upgrade numpy inside pipx venv
