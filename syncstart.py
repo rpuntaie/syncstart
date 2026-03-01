@@ -7,9 +7,9 @@ The steps taken by ``syncstart``:
 - process and extract sample audio/video clips using ffmpeg with some default and optional filters
 - read the two clips into a 1D array and apply optional z-score normalization
 - compute offset via correlation using scipy ifft/fft
-- print ffmpeg/ffprobe output or optionally quiet that
-- show diagrams to allow MANUAL correction using ZOOM or optionally suppress that
-- print result
+- print ffmpeg/ffprobe output unless quieted by option
+- show diagrams to allow MANUAL correction using ZOOM unless suppressed by option
+- print result as instruction of as CSV
 
 MANUAL correction with ZOOM:
 
@@ -49,7 +49,7 @@ import pathlib
 import sys
 import subprocess
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 __author__ = """Roland Puntaier, drolex2"""
 __email__ = 'roland.puntaier@gmail.com'
 
@@ -63,22 +63,24 @@ denoise = False
 lowpass = 0
 crop = False
 quiet = False
-loglevel = 32
+loglevel = 8
 
-ffmpegvideo = 'ffmpeg -loglevel %s -hwaccel auto -ss %s -i "{}" %s -map 0:v -c:v mjpeg -q 1 -f mjpeg "{}"'
-ffmpegwav = 'ffmpeg -loglevel %s -ss %s -i "{}" %s -map 0:a -c:a pcm_s16le -ac 1 -f wav "{}"'
+ffmpegvideo = 'ffmpeg -hide_banner -loglevel %s -hwaccel auto -ss %s -i "{}" -t %s %s -map 0:v:0 -c:v mjpeg -q 1 -pix_fmt yuv420p -color_range pc -f mjpeg "{}"'
+ffmpegwav = 'ffmpeg -hide_banner -loglevel %s -ss %s -i "{}" -t %s %s -map 0:a:0 -c:a pcm_s16le -ac 1 -f wav "{}"'
 
 audio_filters = {
-  'default': 'atrim=0:%s,aresample=%s',
+  'default': 'aresample=%s',
   'lowpass': 'lowpass=f=%s',
   'denoise': 'afftdn=nr=24:nf=-25'
 }
 
+
 video_filters = {
-  'default': 'trim=0:%s,fps=%s,format=gray,scale=-1:300',
+  'default': 'fps=%s,format=gray,scale=-1:300',
   'crop': 'crop=400:300',
   'denoise': 'hqdn3d=3:3:2:2'
 }
+
 
 def z_score_normalization(array):
   mean = np.mean(array)
@@ -86,9 +88,11 @@ def z_score_normalization(array):
   normalized_array = (array - mean) / std_dev
   return normalized_array
 
+
 def header(cmdstr):
   hdr = '-'*len(cmdstr)
   print('%s\n%s\n%s'%(hdr,cmdstr,hdr))
+
 
 def get_max_rate(in1,in2):
   probe_audio = 'ffprobe -v error -select_streams a:0 -show_entries stream=sample_rate -of default=noprint_wrappers=1'.split()
@@ -112,6 +116,7 @@ def get_max_rate(in1,in2):
         print(result.stderr)
         exit(1)
   return max(rates)
+
 
 def read_video(input_video):
   # Open input video
@@ -138,6 +143,7 @@ def read_video(input_video):
   cap.release()
   return brightdiff
 
+
 def in_out(command,infile,outfile):
   cmdstr = command.format(infile,outfile)
   if not quiet: header(cmdstr)
@@ -145,29 +151,31 @@ def in_out(command,infile,outfile):
   if 0 != ret:
     sys.exit(ret)
 
+
 def get_sample(infile,rate):
   outname = pathlib.Path(infile).stem + '_sample'
   with tempfile.TemporaryDirectory() as tempdir:
     outfile = pathlib.Path(tempdir)/(outname)
     if video: #compare video
-      filters = [video_filters['default']%(take,rate)]
+      filters = [video_filters['default']%(rate)]
       if crop:
         filters.append(video_filters['crop'])
       if denoise:
         filters.append(video_filters['denoise'])
       filter_string = '-vf "' + ','.join(filters) + '"'
-      in_out(ffmpegvideo%(loglevel,begin,filter_string),infile,outfile)
+      in_out(ffmpegvideo%(loglevel,begin,take,filter_string),infile,outfile)
       s = read_video(outfile)
     else: #compare audio
-      filters = [audio_filters['default']%(take,rate)]
+      filters = [audio_filters['default']%(rate)]
       if int(lowpass):
         filters.append(audio_filters['lowpass']%lowpass)
       if denoise:
         filters.append(audio_filters['denoise'])
       filter_string = '-af "' + ','.join(filters) + '"'
-      in_out(ffmpegwav%(loglevel,begin,filter_string),infile,outfile)
+      in_out(ffmpegwav%(loglevel,begin,take,filter_string),infile,outfile)
       r,s = scipy.io.wavfile.read(outfile)
     return s
+
 
 def fig1(title=None):
   fig = plt.figure(1)
@@ -181,11 +189,13 @@ def fig1(title=None):
   global ax
   ax = axs[0]
 
+
 def show1(sr, s, color=None, title=None, v=None):
   if not color: fig1(title)
   if ax and v: ax.axvline(x=v,color='green')
   plt.plot(np.arange(len(s))/sr, s, color or 'black')
   if not color: plt.show()
+
 
 def show2(sr,s1,s2,plus1minus2,in1,in2):
   fig1("Matchup")
@@ -204,6 +214,7 @@ def show2(sr,s1,s2,plus1minus2,in1,in2):
       f'{ff} ({ffclr}) cut {r(toff)}',
       f'{ffo} ({ffoclr})',
       ])
+
 
   def on_zoom(event_ax):
     nonlocal dt, choice, iszoom
@@ -254,20 +265,6 @@ def show2(sr,s1,s2,plus1minus2,in1,in2):
   else:
     return ff, toff
 
-
-def corrabs(s1,s2):
-  ls1 = len(s1)
-  ls2 = len(s2)
-  padsize = ls1+ls2+1
-  padsize = 2**(int(np.log(padsize)/np.log(2))+1)
-  s1pad = np.zeros(padsize)
-  s1pad[:ls1] = s1
-  s2pad = np.zeros(padsize)
-  s2pad[:ls2] = s2
-  corr = scipy.fft.ifft(scipy.fft.fft(s1pad)*np.conj(scipy.fft.fft(s2pad)))
-  ca = np.absolute(corr)
-  xmax = np.argmax(ca)
-  return ls1,ls2,padsize,xmax,ca
 
 def cli_parser(**ka):
   import argparse
@@ -352,9 +349,36 @@ def cli_parser(**ka):
       Output will be: file_to_advance,seconds_to_advance')
   return parser
 
+
+def padsize_xmax_correlation(s1,s2):
+  """
+  FFT correlation between signal1 and signal2.
+
+  Returns:
+    padsize
+      how much padding was added to satisfy fft
+    xmax
+      x with correlation maximum
+    correlation [ndarray]
+      Correlation magnitude array
+  """
+
+  ls1 = len(s1)
+  ls2 = len(s2)
+  padsize = ls1+ls2+1
+  padsize = 2**(int(np.log(padsize)/np.log(2))+1)
+  s1pad = np.zeros(padsize)
+  s1pad[:ls1] = s1
+  s2pad = np.zeros(padsize)
+  s2pad[:ls2] = s2
+  corr = scipy.fft.ifft(scipy.fft.fft(s1pad)*np.conj(scipy.fft.fft(s2pad)))
+  correlation = np.absolute(corr)
+  xmax = np.argmax(correlation)
+  return padsize,xmax,correlation
+
 def file_offset(**ka):
-  """CLI interface to sync two media files using their audio or video streams.
-  ffmpeg needs to be available.
+  """Sync two media files using their audio or video streams.
+  ffmpeg is required.
   """
 
   parser = cli_parser(**ka)
@@ -365,14 +389,14 @@ def file_offset(**ka):
   in1,in2,begin,take = ka['in1'],ka['in2'],ka['begin'],ka['take']
   video,crop,quiet,show = ka['video'],ka['crop'],ka['quiet'],ka['show']
   normalize,denoise,lowpass = ka['normalize'],ka['denoise'],ka['lowpass']
-  loglevel = 16 if quiet else 32
+  loglevel = 8 if quiet else 32
 
   sr = get_max_rate(in1,in2)
   s1,s2 = get_sample(in1,sr),get_sample(in2,sr)
   if normalize:
     s1,s2 = z_score_normalization(s1),z_score_normalization(s2)
-  ls1,ls2,padsize,xmax,ca = corrabs(s1,s2)
-  if show: show1(sr,ca,title='Correlation',v=xmax/sr)
+  padsize,xmax,correlation = padsize_xmax_correlation(s1,s2)
+  if show: show1(sr,correlation,title='Correlation',v=xmax/sr)
   sync_text = """
 ==============================================================================
 %s needs 'ffmpeg -ss %s' cut to get in sync
