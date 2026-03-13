@@ -9,7 +9,7 @@ The steps taken by ``syncstart``:
 - compute offset via correlation using scipy ifft/fft
 - print ffmpeg/ffprobe output unless quieted by option
 - show diagrams to allow MANUAL correction using ZOOM unless suppressed by option
-- print result as instruction of as CSV
+- print result as instruction or as CSV
 
 MANUAL correction with ZOOM:
 
@@ -90,7 +90,7 @@ def z_score_normalization(array):
 
 
 def header(cmdstr):
-  hdr = '-'*len(cmdstr)
+  hdr = '-'*12
   print('%s\n%s\n%s'%(hdr,cmdstr,hdr))
 
 
