@@ -7,9 +7,9 @@ The steps taken by ``syncstart``:
 - process and extract sample audio/video clips using ffmpeg with some default and optional filters
 - read the two clips into a 1D array and apply optional z-score normalization
 - compute offset via correlation using scipy ifft/fft
-- print ffmpeg/ffprobe output (optional)
-- show diagrams to allow MANUAL correction using ZOOM (optional)
-- print result as human readable, or print and return result as CSV
+- print ffmpeg/ffprobe output unless quieted by option
+- show diagrams to allow MANUAL correction using ZOOM unless suppressed by option
+- print result as instruction or as CSV
 
 MANUAL correction with ZOOM:
 
@@ -265,7 +265,6 @@ def show2(sr,s1,s2,plus1minus2,in1,in2):
   else:
     return ff, round(toff, 3)
 
-
 def cli_parser(**ka):
   import argparse
   parser = argparse.ArgumentParser(
@@ -350,17 +349,35 @@ def cli_parser(**ka):
   return parser
 
 
-def estimate_offset(s1,s2):
+def padsize_xmax_correlation(s1,s2):
   """
-  Estimate the delay needed to apply to s1 to align it with s2.
+  FFT correlation between signal1 and signal2.
 
   Returns:
-    offset_samples [int]
-      Number of samples s1 is offset from s2.
-      Positive  -> s1 lags s2 (s1 needs advancement)
-      Negative  -> s1 leads s2 (s1 needs delay)
-    ca [ndarray]
+    padsize
+      how much padding was added to satisfy fft
+    xmax
+      x with correlation maximum
+    correlation [ndarray]
       Correlation magnitude array
+  """
+
+  ls1 = len(s1)
+  ls2 = len(s2)
+  padsize = ls1+ls2+1
+  padsize = 2**(int(np.log(padsize)/np.log(2))+1)
+  s1pad = np.zeros(padsize)
+  s1pad[:ls1] = s1
+  s2pad = np.zeros(padsize)
+  s2pad[:ls2] = s2
+  corr = scipy.fft.ifft(scipy.fft.fft(s1pad)*np.conj(scipy.fft.fft(s2pad)))
+  correlation = np.absolute(corr)
+  xmax = np.argmax(correlation)
+  return padsize,xmax,correlation
+
+def file_offset(**ka):
+  """Sync two media files using their audio or video streams.
+  ffmpeg is required.
   """
   ls1 = len(s1)
   ls2 = len(s2)
@@ -398,8 +415,8 @@ in referenceto media file 2 (in2) using their audio or video streams.
   s1,s2 = get_sample(in1,sr),get_sample(in2,sr)
   if normalize:
     s1,s2 = z_score_normalization(s1),z_score_normalization(s2)
-  offset_samples, corr = estimate_offset(s1,s2)
-  if show: show1(sr, corr, title='Correlation', v=-offset_samples/sr)
+  padsize,xmax,correlation = padsize_xmax_correlation(s1,s2)
+  if show: show1(sr,correlation,title='Correlation',v=xmax/sr)
   sync_text = """
 ============
 The first input is offset %s' seconds.
