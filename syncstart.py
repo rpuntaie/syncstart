@@ -263,8 +263,7 @@ def show2(sr,s1,s2,plus1minus2,in1,in2):
     else:
         return ff,noff
   else:
-    return ff, toff
-
+    return ff, round(toff, 3)
 
 def cli_parser(**ka):
   import argparse
@@ -277,11 +276,11 @@ def cli_parser(**ka):
   if 'in1' not in ka:
     parser.add_argument(
       'in1',
-      help='First media file to sync with second.')
+      help='Offset media file.')
   if 'in2' not in ka:
     parser.add_argument(
       'in2',
-      help='Second media file to sync with first.')
+      help='Reference media file.')
   if 'video' not in ka:
     parser.add_argument(
       '-v','--video',
@@ -380,7 +379,28 @@ def file_offset(**ka):
   """Sync two media files using their audio or video streams.
   ffmpeg is required.
   """
+  ls1 = len(s1)
+  ls2 = len(s2)
+  padsize = ls1+ls2+1
+  padsize = 2**(int(np.log(padsize)/np.log(2))+1)
+  s1pad = np.zeros(padsize)
+  s1pad[:ls1] = s1
+  s2pad = np.zeros(padsize)
+  s2pad[:ls2] = s2
+  corr = scipy.fft.ifft(scipy.fft.fft(s1pad)*np.conj(scipy.fft.fft(s2pad)))
+  ca = np.absolute(corr)
+  xmax = np.argmax(ca)
+  offset_samples = xmax
+  if xmax > padsize // 2:
+    offset_samples = xmax-padsize
+  return offset_samples, ca
 
+
+def file_offset(**ka):
+  """CLI program to compute timing offset (seconds) of media file 1 (in1)
+in referenceto media file 2 (in2) using their audio or video streams.
+  ffmpeg is required.
+  """
   parser = cli_parser(**ka)
   args = parser.parse_args().__dict__
   ka.update(args)
@@ -398,26 +418,21 @@ def file_offset(**ka):
   padsize,xmax,correlation = padsize_xmax_correlation(s1,s2)
   if show: show1(sr,correlation,title='Correlation',v=xmax/sr)
   sync_text = """
-==============================================================================
-%s needs 'ffmpeg -ss %s' cut to get in sync
-==============================================================================
+============
+The first input is offset %s' seconds.
+============
 """
-  if xmax > padsize // 2:
-    if show:
-      file,offset = show2(sr,s1,s2,-(padsize-xmax),in1,in2)
-    else:
-      file,offset = in2,(padsize-xmax)/sr
+  if show:
+    file, offset_seconds = show2(sr, s1, s2, offset_samples, in1, in2)
   else:
-    if show:
-      file,offset = show2(sr,s1,s2,xmax,in1,in2)
-    else:
-      file,offset = in1,xmax/sr
+    file,offset_seconds = in1,round(offset_samples/sr, 3)
   if not quiet: #default
-    print(sync_text%(file,offset))
+    print(sync_text%(offset_seconds))
   else: #quiet
     ## print csv: file_to_advance,seconds_to_advance
-    print("%s,%s"%(file,offset))
-  return file,offset
+    print("%s,%s"%(file,offset_seconds))
+  return file,offset_seconds
+
 
 main = file_offset
 if __name__ == '__main__':
