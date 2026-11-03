@@ -149,7 +149,8 @@ def in_out(command,infile,outfile):
   if not quiet: header(cmdstr)
   ret = os.system(cmdstr)
   if 0 != ret:
-    sys.exit(ret)
+    # os.system returns a wait status (256 for exit code 1), and sys.exit(256) exits with 0
+    sys.exit(1)
 
 
 def get_sample(infile,rate):
@@ -419,6 +420,9 @@ def file_offset(**ka):
     print("%s,%s"%(file,offset))
   return file,offset
 
-main = file_offset
+def main():
+  # the console script runs sys.exit(main()), so do not return the result tuple
+  file_offset()
+
 if __name__ == '__main__':
     main()
